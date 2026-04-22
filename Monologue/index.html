@@ -366,20 +366,17 @@
           btn.textContent = 'Verifying…';
           try {
             await verifyPasskey(email);
-            // Biometrics OK — silent Auth0 re-auth
-            showView('auth0');
-            container.innerHTML = '<div class="drawer-loading"><div class="spinner"></div><span>Signing you in…</span></div>';
-            await auth0Client.loginWithPopup({
-              authorizationParams: { connection: 'email', login_hint: email },
-              container: 'auth0-container',
-            });
-            const user = await auth0Client.getUser();
-            currentUser = user;
+            // Biometrics passed — trust local verification, skip Auth0 popup
+            // (popup would be blocked by browser after async WebAuthn chain)
             closeDrawer();
-            showHome(user);
+            // Show home with stored name or fallback
+            const storedName = localStorage.getItem('monologue_name_' + email) || email.split('@')[0];
+            landing.classList.remove('active');
+            home.classList.add('active');
+            greeting.textContent = 'Hi ' + storedName;
             return;
           } catch(bioErr) {
-            console.warn('Biometric failed, falling back', bioErr);
+            console.warn('Biometric failed, falling back to OTP', bioErr);
           }
         }
 
@@ -414,6 +411,10 @@
           container: 'auth0-container',
         });
         currentUser = await auth0Client.getUser();
+
+        // Store name locally so biometric login can show it without Auth0
+        const displayName = currentUser?.given_name || currentUser?.name?.split(' ')[0] || currentUser?.nickname || email.split('@')[0];
+        localStorage.setItem('monologue_name_' + email, displayName);
 
         if (offerBiometrics && !hasBiometrics(email) && window.PublicKeyCredential) {
           const ok = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
