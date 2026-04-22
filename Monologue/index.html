@@ -381,7 +381,7 @@
         }
 
         // Check user type
-        const res  = await fetch('/.netlify/functions/check-user', {
+        const res  = await fetch('/api/check-user', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email }),
         });
