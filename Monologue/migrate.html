@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Update your login — Monologue</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream: #FAF3EE;
+      --ink:   #1A1816;
+      --muted: #7a6f6a;
+      --border: rgba(26,24,22,0.18);
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--cream);
+      font-family: 'Georgia', 'Times New Roman', serif;
+      color: var(--ink);
+    }
+
+    .screen {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 40px 80px;
+    }
+
+    .text-block {
+      text-align: center;
+      margin-bottom: 52px;
+      max-width: 360px;
+    }
+
+    h1 {
+      font-size: clamp(24px, 6vw, 30px);
+      font-weight: 400;
+      letter-spacing: -0.3px;
+      line-height: 1.2;
+      margin-bottom: 18px;
+    }
+
+    p {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .btn-stack {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 18px 24px;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: opacity 0.2s ease, transform 0.15s ease;
+    }
+    .btn:active { transform: scale(0.98); opacity: 0.85; }
+    .btn-primary   { background: var(--ink); color: var(--cream); }
+    .btn-secondary { background: transparent; color: var(--ink); border: 1.5px solid var(--border); }
+
+    .redirecting {
+      display: none;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      margin-top: 28px;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .text-block { animation: fadeUp 0.5s ease both; }
+    .btn-stack  { animation: fadeUp 0.5s ease 0.1s both; }
+  </style>
+</head>
+<body>
+  <div class="screen">
+    <div class="text-block">
+      <h1>A simpler way<br>to sign in</h1>
+      <p>We now support passwordless login — a one-time code sent to your email. No password needed.</p>
+    </div>
+    <div class="btn-stack" id="btn-stack">
+      <button class="btn btn-primary"   id="btn-switch">Switch to email code</button>
+      <button class="btn btn-secondary" id="btn-dismiss">Keep my password</button>
+    </div>
+    <p class="redirecting" id="redirecting">Redirecting…</p>
+  </div>
+
+  <script>
+    const AUTH0_DOMAIN = 'dev-l32518uugzfqq57h.us.auth0.com';
+
+    function getParam(name) {
+      return new URLSearchParams(window.location.search).get(name);
+    }
+
+    function respond(choice) {
+      document.getElementById('btn-stack').style.display    = 'none';
+      document.getElementById('redirecting').style.display = 'block';
+
+      const state = getParam('state');
+      window.location.href =
+        `https://${AUTH0_DOMAIN}/continue?state=${state}&choice=${choice}`;
+    }
+
+    document.getElementById('btn-switch').addEventListener('click',  () => respond('switch'));
+    document.getElementById('btn-dismiss').addEventListener('click', () => respond('dismiss'));
+  </script>
+</body>
+</html>

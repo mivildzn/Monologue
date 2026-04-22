@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Monologue</title>
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream: #FAF3EE;
+      --ink:   #1A1816;
+      --muted: #7a6f6a;
+      --border: rgba(26,24,22,0.18);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--cream);
+      font-family: 'Georgia', 'Times New Roman', serif;
+      color: var(--ink);
+      overflow: hidden;
+    }
+
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 40px 80px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .screen.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    /* ── Landing ── */
+    #landing .text-block {
+      text-align: center;
+      margin-bottom: 52px;
+    }
+    #landing h1 {
+      font-size: clamp(26px, 7vw, 34px);
+      font-weight: 400;
+      letter-spacing: -0.3px;
+      line-height: 1.15;
+      margin-bottom: 18px;
+    }
+    #landing p {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── Home ── */
+    #home { justify-content: center; }
+    #home h1 {
+      font-size: clamp(24px, 7vw, 32px);
+      font-weight: 400;
+      text-align: center;
+      letter-spacing: -0.2px;
+    }
+    #home .sign-out {
+      position: fixed;
+      top: 52px; right: 28px;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* ── Buttons ── */
+    .btn-stack {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .btn {
+      width: 100%;
+      padding: 18px 24px;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: opacity 0.2s ease, transform 0.15s ease;
+    }
+    .btn:active  { transform: scale(0.98); opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn-primary   { background: var(--ink); color: var(--cream); }
+    .btn-secondary { background: transparent; color: var(--ink); border: 1.5px solid var(--border); }
+
+    /* ── Drawer ── */
+    #drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(26,24,22,0.35);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+      z-index: 100;
+      backdrop-filter: blur(2px);
+    }
+    #drawer-overlay.open { opacity: 1; pointer-events: all; }
+
+    #drawer {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--cream);
+      border-radius: 28px 28px 0 0;
+      padding: 16px 0 48px;
+      transform: translateY(100%);
+      transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1);
+      z-index: 101;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    #drawer.open { transform: translateY(0); }
+
+    .drawer-handle {
+      width: 40px; height: 4px;
+      background: rgba(26,24,22,0.15);
+      border-radius: 2px;
+      margin: 0 auto 20px;
+    }
+
+    /* ── Drawer inner views ── */
+    .drawer-view {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 40px 0;
+    }
+    .drawer-view.active { display: flex; }
+
+    /* Email step */
+    .drawer-title {
+      font-size: 22px;
+      font-weight: 400;
+      text-align: center;
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+    .drawer-sub {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 36px;
+      line-height: 1.5;
+    }
+
+    .input-field {
+      width: 100%;
+      max-width: 360px;
+      padding: 16px 20px;
+      border-radius: 100px;
+      border: 1.5px solid var(--border);
+      background: transparent;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      color: var(--ink);
+      outline: none;
+      margin-bottom: 16px;
+      transition: border-color 0.2s;
+    }
+    .input-field:focus { border-color: var(--ink); }
+    .input-field::placeholder { color: var(--muted); }
+
+    /* Migration choice */
+    .migrate-title {
+      font-size: 22px;
+      font-weight: 400;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .migrate-sub {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 36px;
+      line-height: 1.6;
+      max-width: 300px;
+    }
+
+    /* Auth0 popup container */
+    #auth0-container {
+      width: 100%;
+      min-height: 480px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Loading */
+    .drawer-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 40px;
+      gap: 16px;
+      color: var(--muted);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+    }
+    .spinner {
+      width: 24px; height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--ink);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .screen.active .text-block,
+    .screen.active .btn-stack,
+    #home.active h1 { animation: fadeUp 0.5s ease both; }
+    .screen.active .btn-stack { animation-delay: 0.1s; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Landing ─────────────────────────────── -->
+  <div class="screen active" id="landing">
+    <div class="text-block">
+      <h1>Welcome to Monologue</h1>
+      <p>Your Health and wellness is everything.<br>We're here to help.</p>
+    </div>
+    <div class="btn-stack">
+      <button class="btn btn-primary"   id="btn-signup">Create Your Account</button>
+      <button class="btn btn-secondary" id="btn-login">Log In</button>
+    </div>
+  </div>
+
+  <!-- ── Home ────────────────────────────────── -->
+  <div class="screen" id="home">
+    <button class="sign-out" id="btn-signout">Sign out</button>
+    <h1 id="greeting">Hi</h1>
+  </div>
+
+  <!-- ── Drawer overlay ──────────────────────── -->
+  <div id="drawer-overlay"></div>
+
+  <!-- ── Drawer ───────────────────────────────── -->
+  <div id="drawer" role="dialog" aria-modal="true">
+    <div class="drawer-handle"></div>
+
+    <!-- Step 1: Email input -->
+    <div class="drawer-view active" id="view-email">
+      <p class="drawer-title" id="email-title">Welcome back</p>
+      <p class="drawer-sub"   id="email-sub">Enter your email to continue</p>
+      <input
+        class="input-field"
+        id="email-input"
+        type="email"
+        placeholder="your@email.com"
+        autocomplete="email"
+        inputmode="email"
+      />
+      <div class="btn-stack">
+        <button class="btn btn-primary" id="btn-continue">Continue</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Migration choice (for password users) -->
+    <div class="drawer-view" id="view-migrate">
+      <p class="migrate-title">A simpler way<br>to sign in</p>
+      <p class="migrate-sub">We now support passwordless login — a one-time code sent to your email. No password needed.</p>
+      <div class="btn-stack">
+        <button class="btn btn-primary"   id="btn-switch">Switch to email code</button>
+        <button class="btn btn-secondary" id="btn-keep-password">Keep my password</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Auth0 universal login (popup) -->
+    <div class="drawer-view" id="view-auth0">
+      <div id="auth0-container">
+        <div class="drawer-loading">
+          <div class="spinner"></div>
+          <span>Loading…</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const AUTH0_DOMAIN    = 'dev-l32518uugzfqq57h.us.auth0.com';
+    const AUTH0_CLIENT_ID = 'QSrM5nfMwKolrIhiOKwBe5G1EnfEgo1L';
+
+    let auth0Client = null;
+    let currentEmail = '';
+
+    // DOM refs
+    const landing   = document.getElementById('landing');
+    const home      = document.getElementById('home');
+    const greeting  = document.getElementById('greeting');
+    const overlay   = document.getElementById('drawer-overlay');
+    const drawer    = document.getElementById('drawer');
+    const container = document.getElementById('auth0-container');
+
+    const viewEmail   = document.getElementById('view-email');
+    const viewMigrate = document.getElementById('view-migrate');
+    const viewAuth0   = document.getElementById('view-auth0');
+
+    // ── Auth0 init ──────────────────────────────────────────
+    async function initAuth0() {
+      auth0Client = await auth0.createAuth0Client({
+        domain:   AUTH0_DOMAIN,
+        clientId: AUTH0_CLIENT_ID,
+        authorizationParams: { redirect_uri: window.location.origin },
+        cacheLocation: 'memory',
+        useRefreshTokens: true,
+      });
+
+      const query = window.location.search;
+      if (query.includes('code=') && query.includes('state=')) {
+        try {
+          await auth0Client.handleRedirectCallback();
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (e) { console.error(e); }
+      }
+
+      if (await auth0Client.isAuthenticated()) {
+        showHome(await auth0Client.getUser());
+      }
+    }
+
+    // ── Screens ─────────────────────────────────────────────
+    function showHome(user) {
+      const name = user?.given_name || user?.name?.split(' ')[0] || user?.nickname || 'there';
+      greeting.textContent = 'Hi ' + name;
+      landing.classList.remove('active');
+      home.classList.add('active');
+    }
+
+    // ── Drawer ──────────────────────────────────────────────
+    function openDrawer(mode) {
+      // mode = 'signup' | 'login'
+      document.getElementById('email-title').textContent =
+        mode === 'signup' ? 'Create your account' : 'Welcome back';
+      document.getElementById('email-sub').textContent =
+        mode === 'signup' ? 'Enter your email to get started' : 'Enter your email to continue';
+      document.getElementById('email-input').value = '';
+
+      showView('email');
+      overlay.classList.add('open');
+      drawer.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => document.getElementById('email-input').focus(), 500);
+    }
+
+    function closeDrawer() {
+      overlay.classList.remove('open');
+      drawer.classList.remove('open');
+      document.body.style.overflow = '';
+      setTimeout(() => {
+        showView('email');
+        container.innerHTML = '<div class="drawer-loading"><div class="spinner"></div><span>Loading…</span></div>';
+      }, 420);
+    }
+
+    function showView(name) {
+      viewEmail.classList.remove('active');
+      viewMigrate.classList.remove('active');
+      viewAuth0.classList.remove('active');
+      if (name === 'email')   viewEmail.classList.add('active');
+      if (name === 'migrate') viewMigrate.classList.add('active');
+      if (name === 'auth0')   viewAuth0.classList.add('active');
+    }
+
+    // ── Email continue ───────────────────────────────────────
+    async function handleContinue() {
+      const email = document.getElementById('email-input').value.trim();
+      if (!email) return;
+      currentEmail = email;
+
+      const btn = document.getElementById('btn-continue');
+      btn.disabled = true;
+      btn.textContent = 'Checking…';
+
+      try {
+        const res  = await fetch('/.netlify/functions/check-user', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ email }),
+        });
+        const data = await res.json();
+
+        if (data.hasPassword) {
+          // Legacy password user → show migration choice
+          showView('migrate');
+        } else {
+          // New user OR existing OTP user → send OTP directly
+          showView('auth0');
+          await loginWithOTP(email);
+        }
+      } catch (err) {
+        console.error(err);
+        // Fallback: just send OTP
+        showView('auth0');
+        await loginWithOTP(email);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Continue';
+      }
+    }
+
+    // ── Login with OTP ───────────────────────────────────────
+    async function loginWithOTP(email) {
+      try {
+        await auth0Client.loginWithPopup({
+          authorizationParams: {
+            connection:   'email',
+            login_hint:   email,
+          },
+          container: 'auth0-container',
+        });
+        const user = await auth0Client.getUser();
+        closeDrawer();
+        showHome(user);
+      } catch (e) {
+        if (e.message === 'Popup closed') {
+          closeDrawer();
+        } else {
+          console.error('Auth0 OTP error:', e);
+          container.innerHTML = '<div class="drawer-loading"><span style="color:#c0392b;text-align:center;line-height:1.6">Something went wrong.<br>Please try again.</span></div>';
+        }
+      }
+    }
+
+    // ── Login with password ──────────────────────────────────
+    async function loginWithPassword(email) {
+      try {
+        await auth0Client.loginWithPopup({
+          authorizationParams: {
+            connection: 'Username-Password-Authentication',
+            login_hint: email,
+          },
+          container: 'auth0-container',
+        });
+        const user = await auth0Client.getUser();
+        closeDrawer();
+        showHome(user);
+      } catch (e) {
+        if (e.message === 'Popup closed') {
+          closeDrawer();
+        } else {
+          console.error('Auth0 password error:', e);
+          container.innerHTML = '<div class="drawer-loading"><span style="color:#c0392b;text-align:center;line-height:1.6">Something went wrong.<br>Please try again.</span></div>';
+        }
+      }
+    }
+
+    // ── Migration choice handlers ────────────────────────────
+    document.getElementById('btn-switch').addEventListener('click', () => {
+      showView('auth0');
+      loginWithOTP(currentEmail);
+    });
+
+    document.getElementById('btn-keep-password').addEventListener('click', () => {
+      showView('auth0');
+      loginWithPassword(currentEmail);
+    });
+
+    // ── Main buttons ─────────────────────────────────────────
+    document.getElementById('btn-signup').addEventListener('click', () => openDrawer('signup'));
+    document.getElementById('btn-login').addEventListener('click',  () => openDrawer('login'));
+
+    document.getElementById('btn-continue').addEventListener('click', handleContinue);
+    document.getElementById('email-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleContinue();
+    });
+
+    document.getElementById('btn-signout').addEventListener('click', async () => {
+      await auth0Client.logout({ logoutParams: { returnTo: window.location.origin } });
+    });
+
+    overlay.addEventListener('click', closeDrawer);
+
+    initAuth0().catch(console.error);
+  </script>
+</body>
+</html>
